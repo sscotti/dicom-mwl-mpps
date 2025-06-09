@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <h2>📋 MWL Entries (Latest 50)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Accession Number</th>
+                <th>Patient Name</th>
+                <th>Patient ID</th>
+                <th>Scheduled Date</th>
+                <th>Station AE</th>
+                <th>Status</th>
+                <th>Created</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in mwl_entries %}
+            <tr>
+                <td>{{ entry.id }}</td>
+                <td><strong>{{ entry.AccessionNumber }}</strong></td>
+                <td>{{ entry.PatientName or 'N/A' }}</td>
+                <td>{{ entry.PatientID or 'N/A' }}</td>
+                <td>{{ entry.ScheduledProcedureStepStartDate or 'N/A' }}</td>
+                <td>{{ entry.ScheduledStationAETitle or 'N/A' }}</td>
+                <td class="{% if entry.completed %}status-completed{% else %}status-pending{% endif %}">
+                    {% if entry.completed %}✅ Completed{% else %}⏳ Pending{% endif %}
+                </td>
+                <td>{{ entry.created_at.strftime('%Y-%m-%d %H:%M') if entry.created_at else 'N/A' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
