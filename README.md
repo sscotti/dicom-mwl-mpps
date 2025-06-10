@@ -281,4 +281,4 @@ This project is licensed under the **GNU General Public License v3.0 (GPLv3)**.
 
 ---
 
-**Professional DICOM MWL-MPPS implementation ready for medical imaging workflows.**
+**DICOM MWL-MPPS implementation ready for medical imaging workflows.**
