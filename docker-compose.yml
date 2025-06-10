@@ -34,7 +34,8 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./mysql-init/orthanc_ris_v2.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./mysql-init/orthanc_ris.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./mysql-init/dicom_tags_short_names.sql:/docker-entrypoint-initdb.d/02-dicom_tags.sql
 
 
   ################
