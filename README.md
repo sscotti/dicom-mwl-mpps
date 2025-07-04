@@ -4,16 +4,12 @@ DICOM Modality Worklist (MWL) and Modality Performed Procedure Step (MPPS) serve
 
 ## ✨ Features
 
-- ✅ **DICOM MWL C-FIND SCP** - Complete worklist server implementation
-- ✅ **DICOM MPPS N-CREATE/N-SET SCP** - Procedure step tracking  
-- ✅ **FastAPI REST Interface** - Modern web API with interactive docs
+- ✅ **DICOM MWL C-FIND SCP**
+- ✅ **FastAPI REST Interface**
 - ✅ **Web Dashboard** - HTML interface for viewing MWL/MPPS entries
 - ✅ **MySQL Database Backend** - Persistent storage with proper schema
-- ✅ **Docker Containerized** - Complete Docker Compose setup
-- ✅ **Cross-platform Support** - Apple Silicon + Intel compatible
-- ✅ **Professional Testing Suite** - pytest-based integration tests
-- ✅ **Health Monitoring** - Built-in health checks and status endpoints
-- ✅ **Development Tools** - Makefile automation and dev environment
+- ✅ **Docker Containerized**fessional Testing Suite** - pytest-based integration tests
+- ✅ **Development Tools**
 
 ## 🚀 Quick Start
 
