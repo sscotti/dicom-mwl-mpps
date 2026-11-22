@@ -1,9 +1,8 @@
-pynetdicom
-pydicom
-mysql-connector-python
-fastapi
-uvicorn
-python-dotenv
-pytest
-requests
-
+pynetdicom==3.0.4
+pydicom==3.0.2
+mysql-connector-python==26.10.0
+fastapi==0.165.0
+uvicorn==0.54.0
+python-dotenv==1.2.4
+pytest==9.2.0
+requests==2.34.2

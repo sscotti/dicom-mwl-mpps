@@ -4,7 +4,7 @@ Centralized configuration for DICOM MWL-MPPS services
 """
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 
@@ -37,7 +37,7 @@ class ApiConfig:
     host: str = os.getenv('API_HOST', '0.0.0.0')
     port: int = int(os.getenv('API_PORT', '8000'))
     debug: bool = os.getenv('API_DEBUG', 'false').lower() == 'true'
-    cors_origins: list = os.getenv('API_CORS_ORIGINS', '*').split(',')
+    cors_origins: list = field(default_factory=lambda: os.getenv('API_CORS_ORIGINS', '*').split(','))
 
 
 @dataclass
@@ -59,11 +59,11 @@ class LoggingConfig:
 @dataclass
 class Config:
     """Main configuration class"""
-    database: DatabaseConfig = DatabaseConfig()
-    dicom: DicomConfig = DicomConfig()
-    api: ApiConfig = ApiConfig()
-    worklist: WorklistConfig = WorklistConfig()
-    logging: LoggingConfig = LoggingConfig()
+    database: DatabaseConfig = field(default_factory=DatabaseConfig)
+    dicom: DicomConfig = field(default_factory=DicomConfig)
+    api: ApiConfig = field(default_factory=ApiConfig)
+    worklist: WorklistConfig = field(default_factory=WorklistConfig)
+    logging: LoggingConfig = field(default_factory=LoggingConfig)
     
     # Global settings
     environment: str = os.getenv('ENVIRONMENT', 'development')

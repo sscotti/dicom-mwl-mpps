@@ -7,11 +7,8 @@ services:
       - LOG_LEVEL=DEBUG
       - ENVIRONMENT=development
     volumes:
-      # Live code reload during development
-      - ./docker/mwl-mpps:/app
-    ports:
-      # Add debug port for remote debugging
-      - "5678:5678"
+      # Source is mounted by the base file. Restart this container to load edits.
+      - ./config.py:/app/config.py:ro
     hostname: dicom-mwl-mpps
     networks:
       default:
@@ -21,15 +18,13 @@ services:
 
   mwl-api:
     environment:
-      - API_DEBUG=true
       - LOG_LEVEL=DEBUG
       - ENVIRONMENT=development
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload --log-level debug
     volumes:
-      # Live code reload during development
+      # Edits under docker/mwl-api are reloaded by uvicorn.
       - ./docker/mwl-api:/app
-    ports:
-      # Add debug port for FastAPI debugging
-      - "5679:5679"
+      - ./config.py:/app/config.py:ro
     hostname: mwl-api
     networks:
       default:
@@ -55,7 +50,8 @@ services:
   # Add a test runner service for integration tests
   test-runner:
     build:
-      context: ./docker/mwl-mpps
+      context: .
+      dockerfile: docker/mwl-mpps/Dockerfile
     container_name: test-runner
     hostname: test-runner
     environment:

@@ -2,13 +2,22 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+import logging
 import os
-import json
+import re
+from datetime import datetime
+
+from config import config
 from mwl_handler import create_mwl_file
 from dotenv import load_dotenv
-from db_utils import insert_mwl_record, get_DB
+from db_utils import DuplicateAccession, insert_mwl_record, get_DB
+import mysql.connector
 
 load_dotenv()
+logging.basicConfig(
+    level=getattr(logging, config.logging.level.upper(), logging.INFO),
+    format=config.logging.format,
+)
 
 app = FastAPI()
 
@@ -20,7 +29,14 @@ os.makedirs("static", exist_ok=True)
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-WORKLIST_DIR = os.environ.get("WORKLIST_DIR", "/worklist")
+WORKLIST_DIR = config.worklist.directory
+
+def worklist_filename(accession):
+    """Build a file name that cannot escape the worklist directory."""
+    stamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    raw = str(accession).strip() if accession else stamp
+    safe = re.sub(r"[^A-Za-z0-9._-]", "_", raw)[:64].strip("._")
+    return f"{safe or stamp}.wl"
 
 @app.get("/health")
 async def health_check():
@@ -40,20 +56,36 @@ async def health_check():
 async def create_mwl_from_json(request: Request):
     try:
         json_data = await request.json()
-        # Generate filename from AccessionNumber or timestamp
-        from datetime import datetime
-        filename = f"{json_data.get('AccessionNumber', datetime.now().strftime('%Y%m%d%H%M%S'))}.wl"
-        output_path = os.path.join(WORKLIST_DIR, filename)
-        ds = create_mwl_file(json_data, output_path)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Request body must be JSON") from exc
+    if not isinstance(json_data, dict):
+        raise HTTPException(status_code=400, detail="JSON body must be an object")
+
+    # The database row is the worklist. The .wl file is written only after it commits.
+    ds = create_mwl_file(json_data)
+    try:
         row_id = insert_mwl_record(json_data, ds)
-        return JSONResponse({
-            "status": "success",
-            "message": f"MWL file created: {filename}",
-            "path": output_path,
-            "db_row_id": row_id
-        })
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except DuplicateAccession as exc:
+        raise HTTPException(status_code=409, detail=f"Accession number already exists: {exc}") from exc
+    except mysql.connector.Error as exc:
+        logging.exception("MWL insert failed")
+        raise HTTPException(status_code=503, detail="Database insert failed") from exc
+
+    filename = worklist_filename(getattr(ds, "AccessionNumber", None))
+    output_path = os.path.join(WORKLIST_DIR, filename)
+    try:
+        os.makedirs(WORKLIST_DIR, exist_ok=True)
+        ds.save_as(output_path, enforce_file_format=True)
+    except Exception:
+        logging.exception("Stored MWL row %s but failed to write %s", row_id, output_path)
+        output_path = None
+
+    return JSONResponse({
+        "status": "success",
+        "message": f"MWL entry stored: {filename}",
+        "path": output_path,
+        "db_row_id": row_id,
+    })
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
@@ -102,10 +134,11 @@ async def dashboard(request: Request):
             "has_mpps": has_mpps
         }
         
-        return templates.TemplateResponse("dashboard.html", {
-            "request": request, 
-            "stats": stats
-        })
+        return templates.TemplateResponse(
+            request,
+            "dashboard.html",
+            {"stats": stats},
+        )
         
     except Exception as e:
         return HTMLResponse(f"<h1>Dashboard Error: {str(e)}</h1><p>Try creating some MWL entries first.</p>", status_code=500)
@@ -148,11 +181,14 @@ async def mwl_list(request: Request):
         cursor.close()
         conn.close()
         
-        return templates.TemplateResponse("mwl_list.html", {
-            "request": request,
-            "mwl_entries": mwl_entries,
-            "empty_message": "No MWL entries found. Create one using the API." if not mwl_entries else None
-        })
+        return templates.TemplateResponse(
+            request,
+            "mwl_list.html",
+            {
+                "mwl_entries": mwl_entries,
+                "empty_message": "No MWL entries found. Create one using the API." if not mwl_entries else None,
+            },
+        )
         
     except Exception as e:
         return HTMLResponse(f"<h1>MWL List Error: {str(e)}</h1><p>Database may not be initialized properly.</p>", status_code=500)
@@ -187,11 +223,14 @@ async def mpps_list(request: Request):
         cursor.close()
         conn.close()
         
-        return templates.TemplateResponse("mpps_list.html", {
-            "request": request,
-            "mpps_entries": mpps_entries,
-            "empty_message": "No MPPS entries found." if not mpps_entries else None
-        })
+        return templates.TemplateResponse(
+            request,
+            "mpps_list.html",
+            {
+                "mpps_entries": mpps_entries,
+                "empty_message": "No MPPS entries found." if not mpps_entries else None,
+            },
+        )
         
     except Exception as e:
         return HTMLResponse(f"<h1>MPPS List Error: {str(e)}</h1>", status_code=500)

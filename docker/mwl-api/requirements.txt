@@ -1,7 +1,7 @@
-fastapi
-uvicorn
-pydicom
-mysql-connector-python
-python-dotenv
-jinja2
-python-multipart
+fastapi==0.165.0
+uvicorn==0.54.0
+pydicom==3.0.2
+mysql-connector-python==26.10.0
+python-dotenv==1.2.4
+jinja2==3.1.6
+python-multipart==0.0.34

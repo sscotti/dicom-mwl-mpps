@@ -1,7 +1,5 @@
-import pydicom
 from pydicom.dataset import Dataset, FileDataset
 from pydicom.uid import generate_uid
-import json
 import logging
 from datetime import datetime
 
@@ -43,15 +41,28 @@ def create_mwl_from_json(json_data):
             logging.error(f"Error setting {key}: {str(e)}")
             raise
 
-    # Add required MWL attributes if not present
-    if not hasattr(ds, 'StudyInstanceUID'):
+    # Study Instance UID belongs on the worklist item itself.
+    if not getattr(ds, "StudyInstanceUID", None):
         ds.StudyInstanceUID = generate_uid()
-    
-    if not hasattr(ds, 'ScheduledProcedureStepStartDate'):
-        ds.ScheduledProcedureStepStartDate = datetime.now().strftime('%Y%m%d')
-    
-    if not hasattr(ds, 'ScheduledProcedureStepStartTime'):
-        ds.ScheduledProcedureStepStartTime = datetime.now().strftime('%H%M%S')
+
+    # Scheduled step attributes belong inside the sequence a modality queries.
+    sequence = getattr(ds, "ScheduledProcedureStepSequence", None)
+    if not sequence:
+        ds.ScheduledProcedureStepSequence = [Dataset()]
+        sequence = ds.ScheduledProcedureStepSequence
+    step = sequence[0]
+    if not getattr(step, "ScheduledProcedureStepStartDate", None):
+        step.ScheduledProcedureStepStartDate = getattr(
+            ds, "ScheduledProcedureStepStartDate", None
+        ) or datetime.now().strftime("%Y%m%d")
+    if not getattr(step, "ScheduledProcedureStepStartTime", None):
+        step.ScheduledProcedureStepStartTime = getattr(
+            ds, "ScheduledProcedureStepStartTime", None
+        ) or datetime.now().strftime("%H%M%S")
+    if not getattr(step, "ScheduledProcedureStepID", None):
+        step.ScheduledProcedureStepID = "SPS1"
+    if not getattr(step, "Modality", None):
+        step.Modality = "OT"
 
     return ds
 
@@ -80,24 +91,5 @@ def create_mwl_file(json_data, output_path=None):
         return final_ds
     except Exception as e:
         logging.error(f"Error creating MWL file: {str(e)}")
-        raise
-
-def handle_mwl_request(output, query):
-    """
-    Handle MWL C-FIND requests
-    """
-    try:
-        # Convert query to Dataset
-        query_ds = Dataset()
-        for tag, value in query.items():
-            setattr(query_ds, tag, value)
-        
-        # TODO: Implement your matching logic here
-        # This is where you would query your database or file system
-        # and return matching MWL entries
-        
-        return []  # Return empty list for now
-    except Exception as e:
-        logging.error(f"Error handling MWL request: {str(e)}")
         raise
 

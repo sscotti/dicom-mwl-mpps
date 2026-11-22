@@ -172,6 +172,10 @@ logs/
 *.wl
 *.raw
 
+# Empty files Docker creates where config.py is mounted into /app
+docker/mwl-api/config.py
+docker/mwl-mpps/config.py
+
 # MySQL dumps (if any)
 *.sql.gz
 *.dump 
