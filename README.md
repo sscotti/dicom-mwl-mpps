@@ -2,6 +2,14 @@
 
 DICOM Modality Worklist (MWL) and Modality Performed Procedure Step (MPPS) service, with a small REST API and web dashboard.
 
+When this directory is the copy inside [dicom-mcp](https://github.com/sscotti/dicom-mcp), start the services from that repo's Compose file:
+
+```bash
+docker compose up -d mwl-mpps mwl-api
+```
+
+That uses the parent MySQL service (`mysql`, user `orthanc_ris_app`) and host ports 4104 and 8000. The `make dev-setup` instructions further down start this package on its own, including a separate MySQL on port 3306. Run one of those stacks, not both.
+
 ## Services
 
 | Service | Role | Host port |
@@ -18,7 +26,7 @@ Images are pinned in `docker-compose.yml` and the Dockerfiles: Python 3.11.18, M
 
 Docker and Docker Compose are required. `make` is optional.
 
-`.env.sample` is the configuration template. This checkout already has a `.env` copied from it. On a fresh clone:
+`.env.sample` is the configuration template for this package's own Compose stack. Copy it before `make dev-setup`:
 
 ```bash
 cp .env.sample .env
@@ -42,7 +50,9 @@ That builds the images and starts the stack with `docker-compose.override.yml`. 
 |----------|--------|-------------|
 | `/` | GET | Dashboard |
 | `/health` | GET | Database connectivity |
-| `/mwl` | GET | MWL list |
+| `/mwl` | GET | MWL list (summary columns) |
+| `/mwl/{id}` | GET | Full DICOM dataset for one MWL row |
+| `/mwl/{id}/json` | GET | Same detail as JSON |
 | `/mpps` | GET | MPPS list |
 | `/mwl/create_from_json` | POST | Create an MWL entry from JSON |
 | `/docs` | GET | OpenAPI UI |

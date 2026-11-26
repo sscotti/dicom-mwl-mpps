@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <p><a href="/mwl">← Back to MWL list</a>
+       · <a href="{{ json_url }}" target="_blank">Raw JSON</a></p>
+    <h2>MWL Detail — {{ entry.AccessionNumber or ('#' ~ entry.id) }}</h2>
+
+    <table>
+        <tbody>
+            <tr><th>ID</th><td>{{ entry.id }}</td></tr>
+            <tr><th>Accession</th><td><strong>{{ entry.AccessionNumber }}</strong></td></tr>
+            <tr><th>Patient</th><td>{{ entry.PatientName or 'N/A' }} ({{ entry.PatientID or 'N/A' }})</td></tr>
+            <tr><th>Study UID</th><td style="font-family:monospace;font-size:12px;">{{ entry.StudyInstanceUID or 'N/A' }}</td></tr>
+            <tr><th>Scheduled</th><td>{{ entry.ScheduledProcedureStepStartDate or 'N/A' }} @ {{ entry.ScheduledStationAETitle or 'N/A' }}</td></tr>
+            <tr><th>Status</th>
+                <td class="{% if entry.completed %}status-completed{% else %}status-pending{% endif %}">
+                    {% if entry.completed %}Completed{% else %}Pending{% endif %}
+                </td>
+            </tr>
+            <tr><th>Created</th><td>{{ entry.created_at.strftime('%Y-%m-%d %H:%M:%S') if entry.created_at else 'N/A' }}</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h2>Full DICOM Dataset</h2>
+    {% if decode_error %}
+    <p class="status-pending">{{ decode_error }}</p>
+    {% elif tags %}
+    <table>
+        <thead>
+            <tr>
+                <th>Tag</th>
+                <th>Keyword</th>
+                <th>VR</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in tags %}
+            <tr>
+                <td style="font-family:monospace;white-space:nowrap;">{{ t.tag }}</td>
+                <td style="font-family:monospace;font-size:12px;">{{ t.keyword }}</td>
+                <td>{{ t.vr }}</td>
+                <td>{{ t.value }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No tags decoded.</p>
+    {% endif %}
+</div>
+{% endblock %}

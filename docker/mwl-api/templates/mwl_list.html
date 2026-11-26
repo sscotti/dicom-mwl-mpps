@@ -16,13 +16,14 @@
                 <th>Station AE</th>
                 <th>Status</th>
                 <th>Created</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
             {% for entry in mwl_entries %}
             <tr>
                 <td>{{ entry.id }}</td>
-                <td><strong>{{ entry.AccessionNumber }}</strong></td>
+                <td><strong><a href="/mwl/{{ entry.id }}">{{ entry.AccessionNumber }}</a></strong></td>
                 <td>{{ entry.PatientName or 'N/A' }}</td>
                 <td>{{ entry.PatientID or 'N/A' }}</td>
                 <td>{{ entry.ScheduledProcedureStepStartDate or 'N/A' }}</td>
@@ -31,6 +32,7 @@
                     {% if entry.completed %}✅ Completed{% else %}⏳ Pending{% endif %}
                 </td>
                 <td>{{ entry.created_at.strftime('%Y-%m-%d %H:%M') if entry.created_at else 'N/A' }}</td>
+                <td><a href="/mwl/{{ entry.id }}">Details</a></td>
             </tr>
             {% endfor %}
         </tbody>

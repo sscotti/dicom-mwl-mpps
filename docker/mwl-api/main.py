@@ -10,7 +10,15 @@ from datetime import datetime
 from config import config
 from mwl_handler import create_mwl_file
 from dotenv import load_dotenv
-from db_utils import DuplicateAccession, insert_mwl_record, get_DB
+from db_utils import (
+    DuplicateAccession,
+    bytes_to_dataset,
+    dataset_to_jsonable,
+    dataset_to_rows,
+    get_mwl_row,
+    insert_mwl_record,
+    get_DB,
+)
 import mysql.connector
 
 load_dotenv()
@@ -192,6 +200,70 @@ async def mwl_list(request: Request):
         
     except Exception as e:
         return HTMLResponse(f"<h1>MWL List Error: {str(e)}</h1><p>Database may not be initialized properly.</p>", status_code=500)
+
+
+@app.get("/mwl/{row_id}", response_class=HTMLResponse)
+async def mwl_detail(request: Request, row_id: int):
+    """Show full stored DICOM MWL dataset for one row."""
+    row = get_mwl_row(row_id)
+    if not row:
+        raise HTTPException(status_code=404, detail=f"MWL id {row_id} not found")
+
+    blob = row.get("Dataset")
+    tags = []
+    decode_error = None
+    if blob:
+        try:
+            ds = bytes_to_dataset(blob)
+            tags = dataset_to_rows(ds)
+        except Exception as exc:
+            logging.exception("Failed to decode MWL Dataset for id %s", row_id)
+            decode_error = str(exc)
+    else:
+        decode_error = "No Dataset blob stored for this row."
+
+    summary = {k: row[k] for k in row if k != "Dataset"}
+    return templates.TemplateResponse(
+        request,
+        "mwl_detail.html",
+        {
+            "entry": summary,
+            "tags": tags,
+            "decode_error": decode_error,
+            "json_url": f"/mwl/{row_id}/json",
+        },
+    )
+
+
+@app.get("/mwl/{row_id}/json")
+async def mwl_detail_json(row_id: int):
+    """JSON view of indexed fields + full decoded Dataset."""
+    row = get_mwl_row(row_id)
+    if not row:
+        raise HTTPException(status_code=404, detail=f"MWL id {row_id} not found")
+
+    blob = row.pop("Dataset", None)
+    payload = {
+        "id": row.get("id"),
+        "indexed": {
+            "AccessionNumber": row.get("AccessionNumber"),
+            "StudyInstanceUID": row.get("StudyInstanceUID"),
+            "PatientID": row.get("PatientID"),
+            "PatientName": row.get("PatientName"),
+            "ScheduledProcedureStepStartDate": row.get("ScheduledProcedureStepStartDate"),
+            "ScheduledStationAETitle": row.get("ScheduledStationAETitle"),
+            "completed": bool(row.get("completed")),
+            "created_at": row["created_at"].isoformat() if row.get("created_at") else None,
+        },
+        "dataset": None,
+    }
+    if blob:
+        try:
+            payload["dataset"] = dataset_to_jsonable(bytes_to_dataset(blob))
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Dataset decode failed: {exc}") from exc
+    return JSONResponse(payload)
+
 
 @app.get("/mpps", response_class=HTMLResponse)  
 async def mpps_list(request: Request):

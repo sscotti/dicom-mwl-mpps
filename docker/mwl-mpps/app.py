@@ -1,5 +1,9 @@
 from pynetdicom import AE, evt
-from pynetdicom.sop_class import ModalityWorklistInformationFind, ModalityPerformedProcedureStep
+from pynetdicom.sop_class import (
+    ModalityWorklistInformationFind,
+    ModalityPerformedProcedureStep,
+    Verification,
+)
 from pydicom.uid import ExplicitVRLittleEndian, ImplicitVRLittleEndian, ExplicitVRBigEndian
 import fnmatch
 import logging
@@ -361,14 +365,11 @@ def wait_for_database(attempts=30, delay=2):
 ae = AE()
 ae.ae_title = config.dicom.ae_title
 ae.maximum_associations = config.dicom.max_associations
-ae.add_supported_context(
-    ModalityWorklistInformationFind,
-    [ExplicitVRLittleEndian, ImplicitVRLittleEndian, ExplicitVRBigEndian]
-)
-ae.add_supported_context(
-    ModalityPerformedProcedureStep,
-    [ExplicitVRLittleEndian, ImplicitVRLittleEndian, ExplicitVRBigEndian]
-)
+_ts = [ExplicitVRLittleEndian, ImplicitVRLittleEndian, ExplicitVRBigEndian]
+# C-ECHO so Horos/IsiX "Verify" succeeds (MWL-only SCP otherwise rejects Verification).
+ae.add_supported_context(Verification, _ts)
+ae.add_supported_context(ModalityWorklistInformationFind, _ts)
+ae.add_supported_context(ModalityPerformedProcedureStep, _ts)
 
 wait_for_database()
 ae.start_server((config.dicom.bind_address, config.dicom.port), evt_handlers=handlers, block=True)
